@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        IMAGE = "week6-website:${BUILD_NUMBER}"
+        IMAGE = "bmiller2055/week6-website:${BUILD_NUMBER}"
     }
 
     stages {
@@ -24,6 +24,27 @@ pipeline {
                     docker run --rm "$IMAGE" sh -c \
                       'grep -q "Hello from Jenkins!" /usr/share/nginx/html/index.html'
                 '''
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKERHUB_USER',
+                    passwordVariable: 'DOCKERHUB_TOKEN'
+                )]) {
+                    sh '''
+                        set +x
+                        export DOCKER_CONFIG="$(mktemp -d)"
+                        trap 'rm -rf "$DOCKER_CONFIG"' EXIT
+
+                        printf '%s' "$DOCKERHUB_TOKEN" |
+                          docker login --username "$DOCKERHUB_USER" --password-stdin
+
+                        docker push "$IMAGE"
+                    '''
+                }
             }
         }
 
